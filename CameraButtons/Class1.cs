@@ -24,76 +24,148 @@ namespace CameraButtons
          get { return "Adds buttons on the screen to move and rotate the camera."; }
       }
    }
-
-   public class LoadingExtension : LoadingExtensionBase
+   
+   public class CameraButtonLoadingExtension : LoadingExtensionBase
    {
-      
+      public static UIPanel ThePanel;
+
+      public static int ScaleX(int x)
+      {
+         int scaledX = x;
+
+         // we intentionally use height here to retain aspect ratio
+         scaledX = (int)((float)x * (float)Screen.width / 3440f);
+         
+         return scaledX;
+      }
+
+      public static int ScaleY(int y)
+      {
+         int scaledY = y;
+
+         scaledY = (int)((float)y * (float)Screen.width / 3440);
+
+         return scaledY;
+      }
+
       public override void OnLevelLoaded(LoadMode mode)
       {
+         DebugOutputPanel.AddMessage(ColossalFramework.Plugins.PluginManager.MessageType.Message, "Loading CameraButtons Extension");
          UIView uiv =  GameObject.FindObjectOfType<UIView>();
 
-         CameraButtonBehaviour cbb = uiv.gameObject.AddComponent<CameraButtonBehaviour>();
-         cbb.transform.parent = uiv.transform;
+         try
+         {
+            CameraButtonBehaviour cbb = uiv.gameObject.AddComponent<CameraButtonBehaviour>();
+            cbb.transform.parent = uiv.transform;
 
-         // create a panel to hold buttons
-         UIComponent panel_uic = uiv.AddUIComponent(typeof(UIPanel));
-         panel_uic.transform.parent = uiv.transform;
-         UIPanel panel = panel_uic.GetComponent<UIPanel>();
+            // create a panel to hold buttons
+            UIComponent panel_uic = uiv.AddUIComponent(typeof(UIPanel));
+            panel_uic.transform.parent = uiv.transform;
+            UIPanel panel = panel_uic.GetComponent<UIPanel>();
 
-         panel.width = 175;
-         panel.height = 75;
-         panel.transformPosition = new Vector3(2.0f, -0.6f);
+            // All sizes and positions use pixel screen point values that we scale ourselves (I tried using viewport and couldn't get it to translate to worldpoint properly)
+            // values used are relative to my 3440x1440 res
+            int butWid = 30;
+            int butHt = 30;
 
-         panel.backgroundSprite = "ButtonMenu";
+            panel.width = ScaleX(7 * butWid);
+            panel.height = ScaleY(3 * butHt);
 
-         UIButton zoominbutton = CreateButton(panel, "\u25A1+", new Vector3(3f*25f, 0f*25f));//new Vector3(2.0f, .47f)); // was 1.0, .97
-         UIButton zoomoutbutton = CreateButton(panel, "\u25A1-", new Vector3(3f*25f, 2f*25f));//new Vector3(2.1f, .47f));
-         UIButton leftbutton = CreateButton(panel, "\u2190", new Vector3(0f*25f, 1f*25f));//new Vector3(2.0f, .37f));
-         UIButton rightbutton = CreateButton(panel, "\u2192", new Vector3(2f*25f, 1f*25f));//new Vector3(2.1f, .37f));
-         UIButton forwardbutton = CreateButton(panel, "\u2191", new Vector3(1f*25f, 0f*25f));//new Vector3(2.0f, .27f));
-         UIButton backbutton = CreateButton(panel, "\u2193", new Vector3(1f*25f, 2f*25f));//new Vector3(2.1f, .27f));
-         UIButton rotateleft = CreateButton(panel, "\u21B6", new Vector3(4f*25f, 1f*25f));
-         UIButton rotateright = CreateButton(panel, "\u21B7", new Vector3(6f*25f, 1f*25f));
-         UIButton rotateup = CreateButton(panel, "\u21E1", new Vector3(5f*25f, 0f*25f));
-         UIButton rotatedown = CreateButton(panel, "\u21E3", new Vector3(5f*25f, 2f*25f));
+            // transformposition wants a worldpoint
+            GameObject gameObject = GameObject.FindGameObjectWithTag("MainCamera");
+            if (gameObject != null)
+            {
+               Camera cam = gameObject.GetComponent<Camera>();
 
-         //DebugOutputPanel.AddMessage(ColossalFramework.Plugins.PluginManager.MessageType.Message, rotatedown.absolutePosition.ToString());
-         //DebugOutputPanel.AddMessage(ColossalFramework.Plugins.PluginManager.MessageType.Message, rotatedown.position.ToString());
-         //DebugOutputPanel.AddMessage(ColossalFramework.Plugins.PluginManager.MessageType.Message, rotatedown.transformPosition.ToString());
-         //DebugOutputPanel.AddMessage(ColossalFramework.Plugins.PluginManager.MessageType.Message, rotatedown.relativePosition.ToString());
+               if (cam != null)
+               {
+                  //Vector3 pos_sp = new Vector3(ScaleX((int)((-2 * Screen.width) - (6 * panel.width))), (-ScaleY(Screen.height)) + panel.height);
+                  //Vector3 pos_wp = cam.ScreenToViewportPoint(pos_sp);
 
-         zoominbutton.eventMouseUp += ZoominButtonMouseUp;
-         zoominbutton.eventMouseDown += ZoominButtonMouseDown;
+                  Vector3 pos = new Vector3();
 
-         zoomoutbutton.eventMouseUp += ZoomoutButtonMouseUp;
-         zoomoutbutton.eventMouseDown += ZoomoutButtonMouseDown;
+                  if (cam.aspect < 1.35f) // 4:3
+                  {
+                     pos.x = -1.0f;
+                     pos.y = -0.8f;
+                  }
+                  else if (cam.aspect < 1.62f) // 16:10
+                  {
+                     pos.x = -1.3f;
+                     pos.y = -0.8f;
+                  }
+                  else if (cam.aspect < 1.9f) // 16:9
+                  {
+                     pos.x = -1.4f;
+                     pos.y = -0.8f;
+                  }
+                  else // 21:9 or other
+                  {
+                     pos.x = -2.0f;
+                     pos.y = -0.7f;
+                  }
 
-         leftbutton.eventMouseUp += LeftButtonMouseUp;
-         leftbutton.eventMouseDown += LeftButtonMouseDown;
+                  panel.transformPosition = pos;
+               }
+            }
 
-         rightbutton.eventMouseUp += RightButtonMouseUp;
-         rightbutton.eventMouseDown += RightButtonMouseDown;
+            panel.backgroundSprite = "ButtonMenu";
 
-         forwardbutton.eventMouseUp += ForwardButtonMouseUp;
-         forwardbutton.eventMouseDown += ForwardButtonMouseDown;
+            int buttonw = ScaleX(butWid);
+            int buttonh = ScaleY(butHt);
 
-         backbutton.eventMouseUp += BackButtonMouseUp;
-         backbutton.eventMouseDown += BackButtonMouseDown;
+            UIButton zoominbutton = CreateButton(panel, "\u25A1+", new Vector3(3f * buttonw, 0f * buttonh));
+            UIButton zoomoutbutton = CreateButton(panel, "\u25A1-", new Vector3(3f * buttonw, 2f * buttonh));
+            UIButton leftbutton = CreateButton(panel, "\u2190", new Vector3(0f * buttonw, 1f * buttonh));
+            UIButton rightbutton = CreateButton(panel, "\u2192", new Vector3(2f * buttonw, 1f * buttonh));
+            UIButton forwardbutton = CreateButton(panel, "\u2191", new Vector3(1f * buttonw, 0f * buttonh));
+            UIButton backbutton = CreateButton(panel, "\u2193", new Vector3(1f * buttonw, 2f * buttonh));
+            UIButton rotateleft = CreateButton(panel, "\u21B6", new Vector3(4f * buttonw, 1f * buttonh));
+            UIButton rotateright = CreateButton(panel, "\u21B7", new Vector3(6f * buttonw, 1f * buttonh));
+            UIButton rotateup = CreateButton(panel, "\u21E1", new Vector3(5f * buttonw, 0f * buttonh));
+            UIButton rotatedown = CreateButton(panel, "\u21E3", new Vector3(5f * buttonw, 2f * buttonh));
 
-         rotateleft.eventMouseUp += RotateLeftMouseUp;
-         rotateleft.eventMouseDown += RotateLeftMouseDown;
+            zoominbutton.eventMouseUp += ZoominButtonMouseUp;
+            zoominbutton.eventMouseDown += ZoominButtonMouseDown;
 
-         rotateright.eventMouseUp += RotateRightMouseUp;
-         rotateright.eventMouseDown += RotateRightMouseDown;
+            zoomoutbutton.eventMouseUp += ZoomoutButtonMouseUp;
+            zoomoutbutton.eventMouseDown += ZoomoutButtonMouseDown;
 
-         rotateup.eventMouseUp += RotateUpMouseUp;
-         rotateup.eventMouseDown += RotateUpMouseDown;
+            leftbutton.eventMouseUp += LeftButtonMouseUp;
+            leftbutton.eventMouseDown += LeftButtonMouseDown;
 
-         rotatedown.eventMouseUp += RotateDownMouseUp;
-         rotatedown.eventMouseDown += RotateDownMouseDown;
+            rightbutton.eventMouseUp += RightButtonMouseUp;
+            rightbutton.eventMouseDown += RightButtonMouseDown;
 
-         // call up
-         base.OnLevelLoaded(mode);
+            forwardbutton.eventMouseUp += ForwardButtonMouseUp;
+            forwardbutton.eventMouseDown += ForwardButtonMouseDown;
+
+            backbutton.eventMouseUp += BackButtonMouseUp;
+            backbutton.eventMouseDown += BackButtonMouseDown;
+
+            rotateleft.eventMouseUp += RotateLeftMouseUp;
+            rotateleft.eventMouseDown += RotateLeftMouseDown;
+
+            rotateright.eventMouseUp += RotateRightMouseUp;
+            rotateright.eventMouseDown += RotateRightMouseDown;
+
+            rotateup.eventMouseUp += RotateUpMouseUp;
+            rotateup.eventMouseDown += RotateUpMouseDown;
+
+            rotatedown.eventMouseUp += RotateDownMouseUp;
+            rotatedown.eventMouseDown += RotateDownMouseDown;
+
+            DebugOutputPanel.AddMessage(ColossalFramework.Plugins.PluginManager.MessageType.Message, "done onlevelloaded");
+
+            ThePanel = panel;
+
+            // call up
+            base.OnLevelLoaded(mode);
+         }
+         catch(Exception ex)
+         {
+            DebugOutputPanel.AddMessage(ColossalFramework.Plugins.PluginManager.MessageType.Message, string.Format("CameraButtons exception: {0}", ex.Message));
+         }
       }
 
       private UIButton CreateButton(UIPanel panel, string text, Vector3 pos)
@@ -103,8 +175,8 @@ namespace CameraButtons
 
          UIButton button = zo_uic.GetComponent<UIButton>();
          button.text = text;
-         button.width = 25;
-         button.height = 25;
+         button.width = ScaleX(30);
+         button.height = ScaleY(30);
          button.normalBgSprite = "ButtonMenu";
          button.disabledBgSprite = "ButtonMenuDisabled";
          button.hoveredBgSprite = "ButtonMenuHovered";
@@ -293,6 +365,19 @@ namespace CameraButtons
          }
          else if (LeftActive)
          {
+            if (CameraButtonLoadingExtension.ThePanel != null && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+            {
+               // move the panel
+               Vector3 pos = CameraButtonLoadingExtension.ThePanel.transformPosition;
+               Vector3 apos = CameraButtonLoadingExtension.ThePanel.absolutePosition;
+
+               pos.x -= .005f;
+
+               CameraButtonLoadingExtension.ThePanel.transformPosition = pos;
+
+               return;
+            }
+
             GameObject gameObject = GameObject.FindGameObjectWithTag("MainCamera");
             if (gameObject != null)
             {
@@ -317,6 +402,19 @@ namespace CameraButtons
          }
          else if (RightActive)
          {
+            if (CameraButtonLoadingExtension.ThePanel != null && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+            {
+               // move the panel
+               Vector3 pos = CameraButtonLoadingExtension.ThePanel.transformPosition;
+               Vector3 apos = CameraButtonLoadingExtension.ThePanel.absolutePosition;
+
+               pos.x += .005f;
+
+               CameraButtonLoadingExtension.ThePanel.transformPosition = pos;
+
+               return;
+            }
+
             GameObject gameObject = GameObject.FindGameObjectWithTag("MainCamera");
             if (gameObject != null)
             {
@@ -341,6 +439,19 @@ namespace CameraButtons
          }
          else if (ForwardActive)
          {
+            if (CameraButtonLoadingExtension.ThePanel != null && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+            {
+               // move the panel
+               Vector3 pos = CameraButtonLoadingExtension.ThePanel.transformPosition;
+               Vector3 apos = CameraButtonLoadingExtension.ThePanel.absolutePosition;
+
+               pos.y += .005f;
+
+               CameraButtonLoadingExtension.ThePanel.transformPosition = pos;
+
+               return;
+            }
+
             GameObject gameObject = GameObject.FindGameObjectWithTag("MainCamera");
             if (gameObject != null)
             {
@@ -365,6 +476,19 @@ namespace CameraButtons
          }
          else if (BackActive)
          {
+            if (CameraButtonLoadingExtension.ThePanel != null && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+            {
+               // move the panel
+               Vector3 pos = CameraButtonLoadingExtension.ThePanel.transformPosition;
+               Vector3 apos = CameraButtonLoadingExtension.ThePanel.absolutePosition;
+
+               pos.y -= .005f;
+
+               CameraButtonLoadingExtension.ThePanel.transformPosition = pos;
+
+               return;
+            }
+
             GameObject gameObject = GameObject.FindGameObjectWithTag("MainCamera");
             if (gameObject != null)
             {
